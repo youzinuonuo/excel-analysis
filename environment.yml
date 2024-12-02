@@ -1,0 +1,17 @@
+name: myenv
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pandas
+  - matplotlib
+  - seaborn
+  - pip
+  - pip:
+    - fastapi
+    - uvicorn
+    - python-multipart
+    - pandasai
+    - python-dotenv
+    - openai 
