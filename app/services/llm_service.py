@@ -29,15 +29,18 @@ class LLMService:
             dataframes_list = []
             for name, df in self.dataframes[session_id].items():
                 df.name = name
+                # 将 NaN 值替换为 None
+                df = df.replace({pd.NA: None, pd.NaT: None, float('nan'): None})
                 dataframes_list.append(df)
             
             self.agents[session_id] = Agent(dataframes_list, memory_size=10)
             
-            # 返回数据框信息
+            # 返回数据框信息，处理 NaN 值
             return {
                 "session_id": session_id,
                 "dataframes": {
-                    name: df.head().to_dict() for name, df in self.dataframes[session_id].items()
+                    name: df.fillna("").head().to_dict() 
+                    for name, df in self.dataframes[session_id].items()
                 }
             }
             

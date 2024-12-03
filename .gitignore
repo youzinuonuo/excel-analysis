@@ -164,3 +164,4 @@ cython_debug/
 # 忽略 uploads 目录
 /uploads/
 uploads/
+/cache/

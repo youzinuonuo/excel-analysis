@@ -37,6 +37,11 @@ async def start_analysis(
 ):
     """开始分析并初始化Agent"""
     try:
+        # 打印接收到的参数
+        print(f"file amounts: {len(files)}")
+        print(f"table names: {table_names}")
+        print(f"API_KEY: {api_key[:8]}...") # 只打印API key的前8位
+        
         # 保存文件并获取文件信息
         file_info = await file_service.save_uploaded_files(files, table_names)
         
@@ -61,6 +66,10 @@ async def analyze_query(
 ):
     """查询Agent"""
     try:
+        # 打印接收到的参数
+        print(f"会话ID: {session_id}")
+        print(f"查询内容: {query}")
+        
         if session_id not in sessions:
             raise HTTPException(status_code=404, detail="会话ID未找到")
         
