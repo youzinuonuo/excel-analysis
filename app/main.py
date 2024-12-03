@@ -1,9 +1,10 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List
+from typing import List, Dict
 from app.services.llm_service import LLMService
 from app.services.file_service import FileService
 from pydantic import BaseModel
+import uuid
 
 app = FastAPI()
 
@@ -20,38 +21,53 @@ app.add_middleware(
 file_service = FileService()
 llm_service = LLMService(file_service)
 
+# 会话存储
+sessions: Dict[str, List[str]] = {}
+
 class AnalyzeRequest(BaseModel):
     query: str
     api_key: str
     use_pandas_ai: bool = True
 
-@app.post("/api/analyze")
-async def analyze_files(
+@app.post("/api/start-analysis")
+async def start_analysis(
     files: List[UploadFile] = File(...),
-    query: str = None,
-    api_key: str = None,
-    use_pandas_ai: bool = True
+    table_names: List[str] = Form(...),
+    api_key: str = Form(...)
 ):
-    """
-    分析上传的文件并生成图表
-    """
+    """开始分析并初始化Agent"""
     try:
-        # 使用 file_service 保存文件
-        file_paths = await file_service.save_uploaded_files(files)
+        # 保存文件并获取文件信息
+        file_info = await file_service.save_uploaded_files(files, table_names)
         
-        try:
-            # 调用LLM服务生成图表
-            chart_data = await llm_service.generate_chart(
-                file_paths, 
-                query, 
-                api_key, 
-                use_pandas_ai
-            )
-            return {"chart_data": chart_data}
-        finally:
-            # 使用 file_service 清理文件
-            await file_service.cleanup_files(file_paths)
-                    
+        # 创建会话ID
+        session_id = str(uuid.uuid4())
+        sessions[session_id] = {
+            "file_info": file_info,
+            "api_key": api_key
+        }
+        
+        # 初始化对话，传入session_id
+        result = await llm_service.initialize_chat(session_id, file_info, api_key)
+        return result  # result已包含session_id
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/query")
+async def analyze_query(
+    session_id: str,
+    query: str
+):
+    """查询Agent"""
+    try:
+        if session_id not in sessions:
+            raise HTTPException(status_code=404, detail="会话ID未找到")
+        
+        # 直接调用chat方法获取响应
+        response = await llm_service.chat(query)
+        return response
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
